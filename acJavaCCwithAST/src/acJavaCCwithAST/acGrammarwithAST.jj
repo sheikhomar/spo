@@ -1,0 +1,107 @@
+/**
+ * JavaCC template file created by SF JavaCC plugin 1.5.17+ wizard for JavaCC 1.5.0+
+ */options{  JDK_VERSION = "1.5";  static = true;}PARSER_BEGIN(EG1)package acJavaCCwithAST;
+
+import java.util.ArrayList;
+
+public class EG1{  public static void main(String args []) throws ParseException  {    EG1 parser = new EG1(System.in);    while (true)    {      System.out.println("Reading from standard input...");      System.out.print("Enter an expression:");      try      {        switch (EG1.one_line())        {          case 0 :           System.out.println("OK.");          break;          case 1 :           System.out.println("Goodbye.");          break;          default :           break;        }      }      catch (Exception e)      {        System.out.println("NOK.");        System.out.println(e.getMessage());        EG1.ReInit(System.in);      }      catch (Error e)      {        System.out.println("Oops.");        System.out.println(e.getMessage());        break;      }    }  }}PARSER_END(EG1)SKIP :{  " "| "\r"| "\t"| "\n"}TOKEN : /* OPERATORS */
+{
+  < PLUS : "+" >
+| < MINUS : "-" >
+| < FLOATDCL : "f" >
+| < INTDCL : "i" >
+| < PRINT : "p" >
+| < ASSIGN : "=" >
+}
+
+TOKEN :
+{
+  < INUM : (< DIGIT >)+ >
+| < FNUM : (< DIGIT >)+ (".") (< DIGIT >)+ >
+| < #DIGIT : [ "0"-"9" ] >
+| < ID : ["a"-"e"]|["g"-"h"]|["j"-"o"]|["q"-"z"] >
+}
+
+int one_line() :
+{AST p;}
+{
+  p = prog() ";" //<EOF >
+  {
+    p.prettyprint();
+    return 0;
+  }
+| ";"
+  {
+    return 1;
+  }
+}
+
+AST prog() :
+{Prog itsAST = new Prog(new ArrayList<AST >());
+ AST dcl;
+ AST stm;
+}
+{(
+  dcl = dcl()  {itsAST.prog.add(dcl);}
+  )+
+  (stm = stmt()
+  {itsAST.prog.add(stm);}
+  )*
+  {return itsAST;}
+}
+
+//prog - > dcls stmts
+//dcls -> dcl dcls | epsilon
+//dcl -> floatdcl id
+//     | intdcl id
+// Stmts -> stmt stmts  | epsilon
+// stmt - > id assign Val Expr
+//       | print id
+// expr - > plus Val Expr
+//       | minus Val Expr
+//       | epsilon
+// Val - > id | fnum | inum
+
+//ac grammar in ebnf
+//prog - > dcl* stmt*
+//stmt - > id assign val expr? | print id
+//expr - > plus val expr? | minus val expr? 
+
+AST dcl() :
+{Token t;}
+{
+  (< FLOATDCL > t = <ID >)  {return new FloatDcl(t.image);}
+  | (< INTDCL > t = <ID >)  {return new IntDcl(t.image);}
+}
+
+AST stmt() :
+{Boolean b = true;
+ AST v;
+ Computing e = null;
+ Token t;
+}
+{
+  (t = < ID ><ASSIGN > v = val() ((e = expr()){b = false;})?)  {if (b) return v; else { e.child1 = v; return e;}}
+| (< PRINT > t = <ID >)  {return new Printing(t.image);}
+}
+
+AST val() :
+{Token t;}
+{
+  t = < INUM >  {return new IntConsting(t.image);}
+| t = < FNUM >
+  {return new FloatConsting(t.image);}
+| t= <  ID >  {return new SymReferencing(t.image);}
+}
+
+Computing expr() :
+{Boolean b = true;
+ AST v;
+ Computing e =  null;
+}
+{
+  
+      < PLUS > v = val() (e = expr(){b = false;})?{if (b) return new Computing("+",null,v); else { e.child1 = v; return new Computing("+",null,e);}}
+    | < MINUS > v = val() (e = expr(){b = false;})?{if (b) return new Computing("-",null,v); else { e.child1 = v; return new Computing("-",null,e);}}
+    
+}
